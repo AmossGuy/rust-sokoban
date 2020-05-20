@@ -1,6 +1,5 @@
 use cursive::Cursive;
 use cursive::Printer;
-use cursive::XY;
 use cursive::event::{Event, EventResult, Key};
 use cursive::vec::Vec2;
 use cursive::views::Dialog;
@@ -32,13 +31,31 @@ enum SokobanObjectType {
     Box,
 }
 
+#[derive(Copy, Clone)]
+enum MovementDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
 struct SokobanObject {
     r#type: SokobanObjectType,
     pos: Vec2,
 }
 
 impl SokobanObject {
-    fn r#move(&mut self, delta: XY<isize>, tilemap: &SokobanTilemap) {
+    fn r#move(&mut self, direction: MovementDirection, tilemap: &SokobanTilemap) {
+        let newpos = match direction {
+            MovementDirection::Left => self.pos - Vec2::new(1, 0),
+            MovementDirection::Right => self.pos + Vec2::new(1, 0),
+            MovementDirection::Up => self.pos - Vec2::new(0, 1),
+            MovementDirection::Down => self.pos + Vec2::new(0, 1),
+        };
+
+        if !tilemap.tiles[newpos.x + newpos.y * tilemap.width].issolid() {
+            self.pos = newpos;
+        }
     }
 }
 
@@ -127,17 +144,17 @@ impl cursive::view::View for SokobanView {
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
             Event::Key(key) => {
-                let delta = match key {
-                    Key::Left => XY::<isize>::new(-1, 0),
-                    Key::Right => XY::<isize>::new(1, 0),
-                    Key::Up => XY::<isize>::new(0, -1),
-                    Key::Down => XY::<isize>::new(0, 1),
+                let direction = match key {
+                    Key::Left => MovementDirection::Left,
+                    Key::Right => MovementDirection::Right,
+                    Key::Up => MovementDirection::Up,
+                    Key::Down => MovementDirection::Down,
                     _ => return EventResult::Ignored,
                 };
 
                 for object in &mut self.game.objects {
                     if object.r#type == SokobanObjectType::Player {
-                        object.r#move(delta, &self.game.tilemap);
+                        object.r#move(direction, &self.game.tilemap);
                     }
                 }
 
