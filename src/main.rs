@@ -44,21 +44,6 @@ struct SokobanObject {
     pos: Vec2,
 }
 
-impl SokobanObject {
-    fn r#move(&mut self, direction: MovementDirection, tilemap: &SokobanTilemap) {
-        let newpos = match direction {
-            MovementDirection::Left => self.pos - Vec2::new(1, 0),
-            MovementDirection::Right => self.pos + Vec2::new(1, 0),
-            MovementDirection::Up => self.pos - Vec2::new(0, 1),
-            MovementDirection::Down => self.pos + Vec2::new(0, 1),
-        };
-
-        if !tilemap.tiles[newpos.x + newpos.y * tilemap.width].issolid() {
-            self.pos = newpos;
-        }
-    }
-}
-
 struct SokobanGame {
     tilemap: SokobanTilemap,
     objects: Vec<SokobanObject>,
@@ -141,6 +126,7 @@ impl cursive::view::View for SokobanView {
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
         return Vec2::new(self.game.tilemap.width, self.game.tilemap.tiles.len() / self.game.tilemap.width);
     }
+
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
             Event::Key(key) => {
@@ -152,10 +138,12 @@ impl cursive::view::View for SokobanView {
                     _ => return EventResult::Ignored,
                 };
 
-                for object in &mut self.game.objects {
-                    if object.r#type == SokobanObjectType::Player {
-                        object.r#move(direction, &self.game.tilemap);
+                let mut i = 0;
+                while i < self.game.objects.len() {
+                    if self.game.objects[i].r#type == SokobanObjectType::Player {
+                        move_object(&mut self.game.objects, i, direction, &self.game.tilemap);
                     }
+                    i += 1;
                 }
 
                 EventResult::Consumed(None)
@@ -163,6 +151,41 @@ impl cursive::view::View for SokobanView {
             _ => EventResult::Ignored,
         }
     }
+}
+
+fn move_object(objects: &mut Vec<SokobanObject>, which: usize, direction: MovementDirection,
+    tilemap: &SokobanTilemap) -> bool {
+
+    let newpos = match direction {
+        MovementDirection::Left => objects[which].pos - Vec2::new(1, 0),
+        MovementDirection::Right => objects[which].pos + Vec2::new(1, 0),
+        MovementDirection::Up => objects[which].pos - Vec2::new(0, 1),
+        MovementDirection::Down => objects[which].pos + Vec2::new(0, 1),
+    };
+
+    if tilemap.tiles[newpos.x + newpos.y * tilemap.width].issolid() {
+        return false
+    }
+
+    let mut i = 0;
+    while i < objects.len() {
+        if objects[i].pos == newpos {
+            match objects[which].r#type {
+                SokobanObjectType::Box => return false,
+                SokobanObjectType::Player => {
+                    if move_object(objects, i, direction, tilemap) {
+                        break;
+                    } else {
+                        return false;
+                    }
+                },
+            }
+        }
+        i += 1;
+    }
+
+    objects[which].pos = newpos;
+    return true;
 }
 
 fn main() {
