@@ -129,6 +129,11 @@ impl cursive::view::View for SokobanView {
 
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
+            Event::Char('r') => {
+                self.game = load_level();
+
+                EventResult::Consumed(None)
+            },
             Event::Key(key) => {
                 let direction = match key {
                     Key::Left => MovementDirection::Left,
@@ -147,7 +152,7 @@ impl cursive::view::View for SokobanView {
                 }
 
                 EventResult::Consumed(None)
-            }
+            },
             _ => EventResult::Ignored,
         }
     }
@@ -188,7 +193,7 @@ fn move_object(objects: &mut Vec<SokobanObject>, which: usize, direction: Moveme
     return true;
 }
 
-fn main() {
+fn load_level() -> SokobanGame {
     let levelstring = concat!("    #####          ",
                               "    #   #          ",
                               "    #$  #          ",
@@ -201,12 +206,17 @@ fn main() {
                               "    #     #########",
                               "    #######        ");
 
-    let game = SokobanGame::new(19, levelstring);
+    SokobanGame::new(19, levelstring)
+}
+
+fn main() {
+    let game = load_level();
     let gameview = SokobanView::new(game);
 
     let mut siv = Cursive::default();
 
     siv.add_global_callback('q', |s| s.quit());
+    siv.add_global_callback(Event::Key(Key::Esc), |s| s.quit());
 
     siv.add_layer(
         Dialog::around(gameview)
