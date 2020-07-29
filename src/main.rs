@@ -1,10 +1,10 @@
 use cursive::Cursive;
 use cursive::Printer;
-use cursive::event::{Event, EventResult, Key};
+use cursive::event::{Callback, Event, EventResult, Key};
 use cursive::vec::Vec2;
 use cursive::views::Dialog;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 enum SokobanTile {
     Empty,
     Goal,
@@ -84,16 +84,32 @@ impl SokobanGame {
 
         game
     }
+
+    fn has_won(&self) -> bool {
+        for object in &self.objects {
+            if object.r#type != SokobanObjectType::Box {continue;}
+            let linearpos = object.pos.x + object.pos.y * self.tilemap.width;
+            if self.tilemap.tiles[linearpos] != SokobanTile::Goal {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 struct SokobanView {
     game: SokobanGame,
+    callback: Callback,
 }
 
 impl SokobanView {
-    fn new(game: SokobanGame) -> SokobanView {
+    fn new<F>(game: SokobanGame, cb: F) -> SokobanView
+    where
+        F: 'static + Fn(&mut Cursive),
+    {
         SokobanView {
             game,
+            callback: Callback::from_fn(cb),
         }
     }
 }
@@ -147,6 +163,10 @@ impl cursive::view::View for SokobanView {
                 while i < self.game.objects.len() {
                     if self.game.objects[i].r#type == SokobanObjectType::Player {
                         move_object(&mut self.game.objects, i, direction, &self.game.tilemap);
+                        if self.game.has_won() {
+                            return EventResult::Consumed(Some(self.callback.clone()));
+                        }
+                        break;
                     }
                     i += 1;
                 }
@@ -211,7 +231,7 @@ fn load_level() -> SokobanGame {
 
 fn main() {
     let game = load_level();
-    let gameview = SokobanView::new(game);
+    let gameview = SokobanView::new(game, |s| s.quit());
 
     let mut siv = Cursive::default();
 
