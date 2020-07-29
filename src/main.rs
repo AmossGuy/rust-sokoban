@@ -231,7 +231,9 @@ fn load_level() -> SokobanGame {
 
 fn main() {
     let game = load_level();
-    let gameview = SokobanView::new(game, |s| s.quit());
+    let gameview = SokobanView::new(game, |s| s.add_layer(
+        Dialog::text("You win!").button("Quit", |s| s.quit())
+    ));
 
     let mut siv = Cursive::default();
 
