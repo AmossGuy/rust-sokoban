@@ -4,6 +4,10 @@ use cursive::event::{Callback, Event, EventResult, Key};
 use cursive::vec::Vec2;
 use cursive::views::Dialog;
 
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+
 #[derive(Clone, PartialEq)]
 enum SokobanTile {
     Empty,
@@ -18,6 +22,16 @@ impl SokobanTile {
             _ => false,
         }
     }
+}
+
+enum SokobanTileRaw {
+    Wall,
+    Player,
+    GoalPlayer,
+    Box,
+    GoalBox,
+    Goal,
+    Empty,
 }
 
 struct SokobanTilemap {
@@ -50,34 +64,43 @@ struct SokobanGame {
 }
 
 impl SokobanGame {
-    fn new(width: usize, levelstring: &str) -> SokobanGame {
-        assert!(levelstring.chars().count() % width == 0);
+    fn new(width: usize, levelstring: Vec<SokobanTileRaw>) -> SokobanGame {
+        assert!(levelstring.len() % width == 0);
 
         let mut game = SokobanGame {
             tilemap: SokobanTilemap {
                 width,
-                tiles: vec![SokobanTile::Empty; levelstring.chars().count()],
+                tiles: vec![SokobanTile::Empty; levelstring.len()],
             },
             objects: Vec::new(),
         };
 
-        for (i, c) in levelstring.chars().enumerate() {
+        for (i, c) in levelstring.iter().enumerate() {
             game.tilemap.tiles[i] = match c {
-                ' ' | '$' | '@' => SokobanTile::Empty,
-                '.' | '*' | '+' => SokobanTile::Goal,
-                '#' => SokobanTile::Wall,
-                _ => panic!(),
+                SokobanTileRaw::Empty |
+                SokobanTileRaw::Box |
+                SokobanTileRaw::Player => SokobanTile::Empty,
+                SokobanTileRaw::Goal |
+                SokobanTileRaw::GoalBox |
+                SokobanTileRaw::GoalPlayer => SokobanTile::Goal,
+                SokobanTileRaw::Wall => SokobanTile::Wall,
             };
 
             match c {
-                '@' | '+' => game.objects.push(SokobanObject {
-                    r#type: SokobanObjectType::Player,
-                    pos: Vec2::new(i % game.tilemap.width, i / game.tilemap.width),
-                }),
-                '$' | '*' => game.objects.push(SokobanObject {
-                    r#type: SokobanObjectType::Box,
-                    pos: Vec2::new(i % game.tilemap.width, i / game.tilemap.width),
-                }),
+                SokobanTileRaw::Player |
+                SokobanTileRaw::GoalPlayer => {
+                    game.objects.push(SokobanObject {
+                        r#type: SokobanObjectType::Player,
+                        pos: Vec2::new(i % game.tilemap.width, i / game.tilemap.width),
+                    });
+                },
+                SokobanTileRaw::Box |
+                SokobanTileRaw::GoalBox => {
+                    game.objects.push(SokobanObject {
+                        r#type: SokobanObjectType::Box,
+                        pos: Vec2::new(i % game.tilemap.width, i / game.tilemap.width),
+                    });
+                },
                 _ => (),
             };
         }
@@ -146,7 +169,7 @@ impl cursive::view::View for SokobanView {
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
             Event::Char('r') => {
-                self.game = load_level();
+                self.game = load_level(1);
 
                 EventResult::Consumed(None)
             },
@@ -213,24 +236,48 @@ fn move_object(objects: &mut Vec<SokobanObject>, which: usize, direction: Moveme
     return true;
 }
 
-fn load_level() -> SokobanGame {
-    let levelstring = concat!("    #####          ",
-                              "    #   #          ",
-                              "    #$  #          ",
-                              "  ###  $##         ",
-                              "  #  $ $ #         ",
-                              "### # ## #   ######",
-                              "#   # ## #####  ..#",
-                              "# $  $          ..#",
-                              "##### ### #@##  ..#",
-                              "    #     #########",
-                              "    #######        ");
+fn load_level(id: u32) -> SokobanGame {
+    let s = &format!("levels/{}.txt", id);
+    let path = Path::new(s);
+    let file = File::open(&path).unwrap();
+    let reader = BufReader::new(file);
 
-    SokobanGame::new(19, levelstring)
+    let mut width = 0;
+    let mut stuff: Vec<Vec<SokobanTileRaw>> = Vec::new();
+    for line in reader.lines() {
+        stuff.push(line.unwrap().chars().map(
+            |c| match c {
+                '#' => SokobanTileRaw::Wall,
+                '@' => SokobanTileRaw::Player,
+                '+' => SokobanTileRaw::GoalPlayer,
+                '$' => SokobanTileRaw::Box,
+                '*' => SokobanTileRaw::GoalBox,
+                '.' => SokobanTileRaw::Goal,
+                ' ' => SokobanTileRaw::Empty,
+                _ => panic!(),
+            }
+        ).collect());
+        width = width.max(stuff.last().unwrap().len())
+    }
+
+    while stuff.last().unwrap().len() == 0 {
+        stuff.pop();
+    }
+
+    let mut data: Vec<SokobanTileRaw> = Vec::new();
+    for mut thing in stuff {
+        let pad = width - thing.len();
+        data.append(&mut thing);
+        for _ in 0..pad {
+            data.push(SokobanTileRaw::Empty);
+        }
+    }
+
+    SokobanGame::new(width, data)
 }
 
 fn main() {
-    let game = load_level();
+    let game = load_level(1);
     let gameview = SokobanView::new(game, |s| s.add_layer(
         Dialog::text("You win!").button("Quit", |s| s.quit())
     ));
