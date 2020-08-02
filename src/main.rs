@@ -121,17 +121,19 @@ impl SokobanGame {
 }
 
 struct SokobanView {
+    level_id: u32,
     game: SokobanGame,
     callback: Callback,
 }
 
 impl SokobanView {
-    fn new<F>(game: SokobanGame, cb: F) -> SokobanView
+    fn new<F>(level_id: u32, cb: F) -> SokobanView
     where
         F: 'static + Fn(&mut Cursive),
     {
         SokobanView {
-            game,
+            level_id,
+            game: load_level(level_id),
             callback: Callback::from_fn(cb),
         }
     }
@@ -169,7 +171,7 @@ impl cursive::view::View for SokobanView {
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
             Event::Char('r') => {
-                self.game = load_level(1);
+                self.game = load_level(self.level_id);
 
                 EventResult::Consumed(None)
             },
@@ -236,6 +238,11 @@ fn move_object(objects: &mut Vec<SokobanObject>, which: usize, direction: Moveme
     return true;
 }
 
+fn level_exists(id: u32) -> bool {
+    let s = &format!("levels/{}.txt", id);
+    return Path::new(s).exists();
+}
+
 fn load_level(id: u32) -> SokobanGame {
     let s = &format!("levels/{}.txt", id);
     let path = Path::new(s);
@@ -277,8 +284,7 @@ fn load_level(id: u32) -> SokobanGame {
 }
 
 fn main() {
-    let game = load_level(1);
-    let gameview = SokobanView::new(game, |s| s.add_layer(
+    let gameview = SokobanView::new(1, |s| s.add_layer(
         Dialog::text("You win!").button("Quit", |s| s.quit())
     ));
 
