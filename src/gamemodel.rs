@@ -39,12 +39,27 @@ impl GameModel {
         for line in reader.lines() {
             let mut row = vec![];
             for c in line.unwrap().chars() {
+                let x = row.len();
+                let y = tilemap.len();
+
                 row.push(match c {
                     ' ' | '@' | '$' => Tile::Floor,
                     '.' | '+' | '*' => Tile::Goal,
                     '#' => Tile::Wall,
                     _ => panic!(),
                 });
+
+                match c {
+                    '@' | '+' => objects.push(Object {
+                        pos: Vec2::new(x, y),
+                        kind: ObjectKind::Player,
+                    }),
+                    '$' | '*' => objects.push(Object {
+                        pos: Vec2::new(x, y),
+                        kind: ObjectKind::Box,
+                    }),
+                    _ => (),
+                }
             }
             tilemap.push(row);
         }
