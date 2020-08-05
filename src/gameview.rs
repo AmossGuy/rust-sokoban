@@ -3,7 +3,7 @@ use cursive::event::{Callback, Event, EventResult};
 use cursive::vec::Vec2;
 use std::path::Path;
 
-use crate::gamemodel::GameModel;
+use crate::gamemodel::{GameModel, ObjectKind, Tile};
 
 pub struct GameView {
     level_id: usize,
@@ -42,7 +42,29 @@ impl cursive::view::View for GameView {
     }
 
     fn draw(&self, printer: &Printer) {
-        printer.print_hline(Vec2::new(0, 0), self.level_id, "~");
+        for (y, row) in self.model.tilemap.iter().enumerate() {
+            for (x, tile) in row.iter().enumerate() {
+                printer.print(Vec2::new(x, y), match tile {
+                    Tile::Floor => " ",
+                    Tile::Goal => ".",
+                    Tile::Wall => "#",
+                });
+            }
+        }
+
+        for object in self.model.objects.iter() {
+            printer.print(object.pos, match self.model.tilemap[object.pos.y][object.pos.x] {
+                Tile::Floor => match object.kind {
+                    ObjectKind::Player => "@",
+                    ObjectKind::Box => "$",
+                },
+                Tile::Goal => match object.kind {
+                    ObjectKind::Player => "+",
+                    ObjectKind::Box => "*",
+                },
+                _ => panic!(),
+            });
+        }
     }
 
     fn on_event(&mut self, event: Event) -> EventResult {

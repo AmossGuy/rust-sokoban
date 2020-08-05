@@ -18,13 +18,13 @@ pub enum ObjectKind {
 }
 
 pub struct Object {
-    pos: Vec2,
-    kind: ObjectKind,
+    pub pos: Vec2,
+    pub kind: ObjectKind,
 }
 
 pub struct GameModel {
-    tilemap: Vec<Vec<Tile>>,
-    objects: Vec<Object>,
+    pub tilemap: Vec<Vec<Tile>>,
+    pub objects: Vec<Object>,
 }
 
 impl GameModel {
