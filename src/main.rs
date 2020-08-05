@@ -3,6 +3,7 @@ use cursive::event::Key;
 use cursive::view::Nameable;
 use cursive::views::Dialog;
 
+mod gamemodel;
 mod gameview;
 use gameview::GameView;
 

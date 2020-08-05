@@ -1,11 +1,13 @@
 use cursive::{Cursive, Printer};
 use cursive::event::{Callback, Event, EventResult};
 use cursive::vec::Vec2;
-
 use std::path::Path;
+
+use crate::gamemodel::GameModel;
 
 pub struct GameView {
     level_id: usize,
+    model: GameModel,
     callback: Callback,
 }
 
@@ -14,6 +16,7 @@ impl GameView {
     where F: 'static + Fn(&mut Cursive) {
         GameView {
             level_id,
+            model: GameModel::new(level_id),
             callback: Callback::from_fn(cb),
         }
     }
@@ -27,14 +30,15 @@ impl GameView {
     }
 
     pub fn has_another_level(&self) -> bool {
-        let s = &format!("levels/{}.txt", self.get_level() + 1);
-        return Path::new(s).exists();
+        let path_s = &format!("levels/{}.txt", self.get_level() + 1);
+        let path = Path::new(path_s);
+        return path.exists();
     }
 }
 
 impl cursive::view::View for GameView {
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
-        return Vec2::new(self.level_id, 1);
+        self.model.get_level_extents()
     }
 
     fn draw(&self, printer: &Printer) {
