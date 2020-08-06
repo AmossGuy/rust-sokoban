@@ -23,6 +23,7 @@ impl GameView {
 
     pub fn load_level(&mut self, level_id: usize) {
         self.level_id = level_id;
+        self.model = GameModel::new(level_id);
     }
 
     pub fn get_level(&self) -> usize {
