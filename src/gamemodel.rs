@@ -1,4 +1,5 @@
 use cursive::vec::Vec2;
+use cursive::XY;
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -15,6 +16,14 @@ pub enum Tile {
 pub enum ObjectKind {
     Player,
     Box,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Action {
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 pub struct Object {
@@ -81,5 +90,73 @@ impl GameModel {
         }
 
         Vec2::new(width, self.tilemap.len())
+    }
+
+    pub fn do_action(&mut self, action: Action) {
+        let delta = match action {
+            Action::Left => XY::<isize>::new(-1, 0),
+            Action::Right => XY::<isize>::new(1, 0),
+            Action::Up => XY::<isize>::new(0, -1),
+            Action::Down => XY::<isize>::new(0, 1),
+        };
+
+        let mut i = 0;
+        while i < self.objects.len() {
+            if self.objects[i].kind == ObjectKind::Player {
+                self.move_object(i, delta);
+                break;
+            }
+            i += 1;
+        }
+    }
+
+    fn move_object(&mut self, object_index: usize, delta: XY::<isize>) -> bool {
+        let newpos = Vec2::new(
+            u_plus_i(self.objects[object_index].pos.x, delta.x),
+            u_plus_i(self.objects[object_index].pos.y, delta.y),
+        );
+
+        if self.tilemap[newpos.y][newpos.x] == Tile::Wall {
+            return false;
+        }
+
+        let mut i = 0;
+        while i < self.objects.len() {
+            if self.objects[i].pos == newpos {
+                match self.objects[object_index].kind {
+                    ObjectKind::Box => return false,
+                    ObjectKind::Player => {
+                        if self.move_object(i, delta) {
+                            break;
+                        } else {
+                            return false;
+                        }
+                    },
+                }
+            }
+            i += 1;
+        }
+
+        self.objects[object_index].pos = newpos;
+        return true;
+    }
+
+    pub fn has_won(&self) -> bool {
+        for object in self.objects.iter() {
+            if object.kind == ObjectKind::Box {
+                if self.tilemap[object.pos.y][object.pos.x] != Tile::Goal {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+}
+
+fn u_plus_i(u: usize, i: isize) -> usize {
+    if i < 0 {
+        return u - (-i as usize);
+    } else {
+        return u + (i as usize);
     }
 }

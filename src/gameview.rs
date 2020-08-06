@@ -1,9 +1,9 @@
 use cursive::{Cursive, Printer};
-use cursive::event::{Callback, Event, EventResult};
+use cursive::event::{Callback, Event, EventResult, Key};
 use cursive::vec::Vec2;
 use std::path::Path;
 
-use crate::gamemodel::{GameModel, ObjectKind, Tile};
+use crate::gamemodel::{Action, GameModel, ObjectKind, Tile};
 
 pub struct GameView {
     level_id: usize,
@@ -70,8 +70,14 @@ impl cursive::view::View for GameView {
 
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
-            Event::Char('y') => EventResult::Consumed(Some(self.callback.clone())),
-            _ => EventResult::Ignored,
+            Event::Key(Key::Up) | Event::Char('w') => self.model.do_action(Action::Up),
+            Event::Key(Key::Down) | Event::Char('s') => self.model.do_action(Action::Down),
+            Event::Key(Key::Left) | Event::Char('a') => self.model.do_action(Action::Left),
+            Event::Key(Key::Right) | Event::Char('d') => self.model.do_action(Action::Right),
+            Event::Char('r') => self.model = GameModel::new(self.level_id),
+            _ => return EventResult::Ignored,
         }
+
+        EventResult::Consumed(if self.model.has_won() {Some(self.callback.clone())} else {None})
     }
 }
