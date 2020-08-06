@@ -113,12 +113,13 @@ impl GameModel {
             }
             i += 1;
         }
+
+        if self.undo_states.last().unwrap().len() == 0 {
+            self.undo_states.pop();
+        }
     }
 
     fn move_object(&mut self, object_index: usize, delta: XY::<isize>) -> bool {
-        let state = self.undo_states.last_mut().unwrap();
-        state.insert(object_index, self.objects[object_index].pos);
-
         let newpos = Vec2::new(
             u_plus_i(self.objects[object_index].pos.x, delta.x),
             u_plus_i(self.objects[object_index].pos.y, delta.y),
@@ -144,6 +145,9 @@ impl GameModel {
             }
             i += 1;
         }
+
+        let state = self.undo_states.last_mut().unwrap();
+        state.insert(object_index, self.objects[object_index].pos);
 
         self.objects[object_index].pos = newpos;
         return true;
