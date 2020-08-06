@@ -1,4 +1,4 @@
-use cursive::Cursive;
+use cursive::{Cursive, CursiveExt};
 use cursive::event::Key;
 use cursive::view::Nameable;
 use cursive::views::Dialog;
