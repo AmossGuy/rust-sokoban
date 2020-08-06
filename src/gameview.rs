@@ -75,6 +75,7 @@ impl cursive::view::View for GameView {
             Event::Key(Key::Left) | Event::Char('a') => self.model.do_action(Action::Left),
             Event::Key(Key::Right) | Event::Char('d') => self.model.do_action(Action::Right),
             Event::Char('r') => self.model = GameModel::new(self.level_id),
+            Event::Char('u') => self.model.undo(),
             _ => return EventResult::Ignored,
         }
 

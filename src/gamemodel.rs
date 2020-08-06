@@ -1,6 +1,7 @@
 use cursive::vec::Vec2;
 use cursive::XY;
 use std::cmp::max;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -34,6 +35,7 @@ pub struct Object {
 pub struct GameModel {
     pub tilemap: Vec<Vec<Tile>>,
     pub objects: Vec<Object>,
+    undo_states: Vec<HashMap<usize, Vec2>>,
 }
 
 impl GameModel {
@@ -80,6 +82,7 @@ impl GameModel {
         GameModel {
             tilemap,
             objects,
+            undo_states: Vec::new(),
         }
     }
 
@@ -100,6 +103,8 @@ impl GameModel {
             Action::Down => XY::<isize>::new(0, 1),
         };
 
+        self.undo_states.push(HashMap::new());
+
         let mut i = 0;
         while i < self.objects.len() {
             if self.objects[i].kind == ObjectKind::Player {
@@ -111,6 +116,9 @@ impl GameModel {
     }
 
     fn move_object(&mut self, object_index: usize, delta: XY::<isize>) -> bool {
+        let state = self.undo_states.last_mut().unwrap();
+        state.insert(object_index, self.objects[object_index].pos);
+
         let newpos = Vec2::new(
             u_plus_i(self.objects[object_index].pos.x, delta.x),
             u_plus_i(self.objects[object_index].pos.y, delta.y),
@@ -139,6 +147,17 @@ impl GameModel {
 
         self.objects[object_index].pos = newpos;
         return true;
+    }
+
+    pub fn undo(&mut self) {
+        let state = match self.undo_states.pop() {
+            Some(x) => x,
+            None => return,
+        };
+
+        for (key, value) in state {
+            self.objects[key].pos = value;
+        }
     }
 
     pub fn has_won(&self) -> bool {
